@@ -2,14 +2,14 @@ const express = require('express');
 const {
   uploadImage,
   uploadImages,
-  deleteImage
+  deleteImage,
 } = require('../../controllers/image/image.controller');
 const {
   uploadSingle,
   uploadMultiple,
-  handleMulterError
+  handleMulterError,
 } = require('../../middleware/upload.middleware');
-const { withAuth } = require('../../middleware/withAuth.middleware');
+const withAuth = require('../../middleware/withAuth.middleware');
 
 const imageRoutes = express.Router();
 
@@ -20,7 +20,7 @@ imageRoutes.post(
   withAuth,
   uploadSingle,
   handleMulterError,
-  uploadImage
+  uploadImage,
 );
 
 // 다중 이미지 업로드 (인증 필수)
@@ -30,15 +30,11 @@ imageRoutes.post(
   withAuth,
   uploadMultiple,
   handleMulterError,
-  uploadImages
+  uploadImages,
 );
 
 // 이미지 삭제 (인증 필수)
 // 사용 예: DELETE /api/images/profiles/filename.jpg
-imageRoutes.delete(
-  '/:category/:filename',
-  withAuth,
-  deleteImage
-);
+imageRoutes.delete('/:category/:filename', withAuth, deleteImage);
 
 module.exports = imageRoutes;
