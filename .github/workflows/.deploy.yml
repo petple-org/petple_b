@@ -1,38 +1,70 @@
-name: Petple-back docker deploy to EC2
+name: Deploy to Home Server (SSH Push)
 
 on:
   push:
-    branches:
-      - main
+    branches: ['main']
+
+# [수정 1] 변수명을 통일하고, 누락된 변수를 추가했습니다.
+env:
+  IMAGE_NAME: ghcr.io/petple-org/petple_b:latest
+  DEPLOY_PATH: /srv/petple/backend
 
 jobs:
-  deploy-petple-back:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+
+  deploy:
+    needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
-        # ec2 접속
+      - name: Deploy to Home Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
           script: |
-            cd ~/petple-back
+            # 1. 배포 폴더 생성 및 이동
+            cd ${{ env.DEPLOY_PATH }}
 
-            echo "📦 Git Pull"
-            git pull origin main
+            # [수정됨] 2. GitHub에서 docker-compose.prod.yml 파일 다운로드 (curl 사용)
+            curl 
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.raw" \
+              -L -o docker-compose.yml \
+              https://api.github.com/repos/${{ github.repository }}/contents/docker-compose.prod.yml
 
-            echo "🛠️ Docker Build"
-            docker build -t petple-backend .
+            echo "${{ secrets.ENV_FILE }}" > .env
 
-            echo "🧹 Stop & Remove Old Container"
-            docker stop petple-backend || true
-            docker rm petple-backend || true
+            # 3. GHCR 로그인 및 이미지 Pull
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ${{ env.IMAGE_NAME }}
 
-            echo "🚀 Run New Container"
-            docker run -d \
-              --name petple-backend \
-              -p 3000:3000 \
-              --env-file .env \
-              petple-backend
+            # 4. Docker Compose로 컨테이너 실행
+            docker compose up -d --force-recreate --remove-orphans
+
+            # 5. 불필요한 이미지 정리
+            docker image prune -f

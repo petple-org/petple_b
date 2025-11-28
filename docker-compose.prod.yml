@@ -1,0 +1,13 @@
+services:
+  petple-backend:
+    container_name: petple-backend
+    image: ghcr.io/petple-org/petple_b:latest
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - home-network
+
+networks:
+  home-network:
+    external: true
