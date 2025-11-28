@@ -4,7 +4,10 @@ services:
     image: ghcr.io/petple-org/petple_b:latest
     restart: always
     env_file:
-      - .env
+      - .env.production
+    volumes:
+      # 정적 파일 저장 볼륨 마운트
+      - /var/www/static/petple:/var/www/static/petple
     networks:
       - home-network
 

@@ -6,6 +6,12 @@ const config = {
   app: {
     port: 8000,
     frontUrl: process.env.FRONT_URL,
+    backendUrl: process.env.BACKEND_URL || 'https://api.petple.duckdns.org',
+  },
+  upload: {
+    path: process.env.UPLOAD_PATH || '/var/www/static/petple',
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760,
+    imageBaseUrl: process.env.IMAGE_BASE_URL || 'https://api.petple.duckdns.org/uploads',
   },
   jwt: {
     secret: process.env.JWT_SECRET,
